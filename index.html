@@ -8,8 +8,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e3f5a">
     <title>Sri Sai Speciality Dental Care</title>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="Sri Sai Dental">
     <style>
         * {
             margin: 0;
@@ -4466,16 +4467,22 @@ Thank you! Visit again.`;
                 '<style>html,body{margin:0;padding:0;background:white;color:#000;font-family:"Bookman Old Style","Book Antiqua",Bookman,Georgia,serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{margin:10mm;size:A4 portrait;}@media print{html,body{margin:0;padding:0;}.no-print{display:none!important;}}</style>' +
                 '</head><body>' + html + '
     <script>
-      // Register Service Worker for PWA offline support
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
-              console.log('✅ SW registered, scope:', reg.scope);
+              console.log('SW registered:', reg.scope);
+              // Request periodic sync permission
+              if ('periodicSync' in reg) {
+                navigator.permissions.query({ name: 'periodic-background-sync' })
+                  .then(function(status) {
+                    if (status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    }
+                  }).catch(function(){});
+              }
             })
-            .catch(function (err) {
-              console.warn('SW registration failed:', err);
-            });
+            .catch(function (err) { console.warn('SW failed:', err); });
         });
       }
     </script>
@@ -5370,16 +5377,22 @@ Thank you! Visit again.`;
                 '<div class="ftr">Thank you for choosing '+CONFIG.clinicName+' &#x1F9B7;</div>' +
                 '
     <script>
-      // Register Service Worker for PWA offline support
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
-              console.log('✅ SW registered, scope:', reg.scope);
+              console.log('SW registered:', reg.scope);
+              // Request periodic sync permission
+              if ('periodicSync' in reg) {
+                navigator.permissions.query({ name: 'periodic-background-sync' })
+                  .then(function(status) {
+                    if (status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    }
+                  }).catch(function(){});
+              }
             })
-            .catch(function (err) {
-              console.warn('SW registration failed:', err);
-            });
+            .catch(function (err) { console.warn('SW failed:', err); });
         });
       }
     </script>
@@ -10718,16 +10731,22 @@ Thank you! Visit again.`;
 
 
     <script>
-      // Register Service Worker for PWA offline support
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
-              console.log('✅ SW registered, scope:', reg.scope);
+              console.log('SW registered:', reg.scope);
+              // Request periodic sync permission
+              if ('periodicSync' in reg) {
+                navigator.permissions.query({ name: 'periodic-background-sync' })
+                  .then(function(status) {
+                    if (status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    }
+                  }).catch(function(){});
+              }
             })
-            .catch(function (err) {
-              console.warn('SW registration failed:', err);
-            });
+            .catch(function (err) { console.warn('SW failed:', err); });
         });
       }
     </script>
