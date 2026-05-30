@@ -14,6 +14,26 @@
   "dir": "ltr",
   "prefer_related_applications": false,
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "related_applications": [],
+  "scope_extensions": [],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/plain": [".txt"],
+        "text/csv": [".csv"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+srisaidental",
+      "url": "/?protocol=%s"
+    }
+  ],
   "icons": [
     {
       "src": "icons/icon-192.png",
