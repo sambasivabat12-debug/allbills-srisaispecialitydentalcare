@@ -10730,81 +10730,6 @@ Thank you! Visit again.`;
     </script>
 
 
-    <!-- Firebase FCM Push Notifications -->
-    <script type="module">
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
-      import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js';
-
-      var FIREBASE_CONFIG = {
-        apiKey: "AIzaSyChfwBA7SWzkMzA0vFFf9uG-Gq0L4YB_a8",
-        authDomain: "sri-sai-speciality-denta-5f6ac.firebaseapp.com",
-        projectId: "sri-sai-speciality-denta-5f6ac",
-        storageBucket: "sri-sai-speciality-denta-5f6ac.firebasestorage.app",
-        messagingSenderId: "1031994512049",
-        appId: "1:1031994512049:web:969ce6e58636213f6e4890"
-      };
-
-      var VAPID_KEY = "BPGlv4qREMBpyIAylK89PmJ-cDwGwfBud92XtA_Qd-D_TGmY7qwSgjaULWSQaPqilRpOQA7tmqLzSGQuv8-jTOc";
-
-      var firebaseApp = initializeApp(FIREBASE_CONFIG);
-      var messaging = getMessaging(firebaseApp);
-
-      // Store FCM token in localStorage for sending later
-      function saveFcmToken(token) {
-        localStorage.setItem('fcm_token', token);
-        console.log('FCM Token saved:', token.substring(0, 20) + '...');
-      }
-
-      // Request permission and get token
-      window.initFCM = function() {
-        if (!('Notification' in window)) return;
-        Notification.requestPermission().then(function(permission) {
-          if (permission === 'granted') {
-            getToken(messaging, { vapidKey: VAPID_KEY })
-              .then(function(token) {
-                if (token) {
-                  saveFcmToken(token);
-                  // Show success toast
-                  if (typeof showToast === 'function') {
-                    showToast('🔔 Push notifications enabled!', 'success');
-                  }
-                }
-              })
-              .catch(function(err) {
-                console.warn('FCM token error:', err);
-              });
-          }
-        });
-      };
-
-      // Handle foreground messages (when app is open)
-      onMessage(messaging, function(payload) {
-        console.log('FCM message received:', payload);
-        var title = payload.notification && payload.notification.title || 'Sri Sai Dental';
-        var body  = payload.notification && payload.notification.body  || '';
-        if (typeof showToast === 'function') {
-          showToast('🔔 ' + title + ': ' + body, 'info');
-        }
-        // Also show browser notification
-        if (Notification.permission === 'granted') {
-          new Notification(title, {
-            body: body,
-            icon: '/icons/icon-192.png',
-            badge: '/icons/icon-192.png'
-          });
-        }
-      });
-
-      // Auto-init after 4 seconds on page load
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          if (typeof window.initFCM === 'function') {
-            window.initFCM();
-          }
-        }, 4000);
-      });
-    </script>
-
     <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
@@ -10826,6 +10751,51 @@ Thank you! Visit again.`;
             .catch(function (err) { console.warn('SW failed:', err); });
         });
       }
+    </script>
+
+    <!-- Firebase FCM - loads AFTER app is fully ready, non-blocking -->
+    <script>
+      window.addEventListener('load', function() {
+        // Delay FCM init by 8 seconds so app loads first
+        setTimeout(function() {
+          try {
+            var fcmScript = document.createElement('script');
+            fcmScript.type = 'module';
+            fcmScript.textContent = [
+              "import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';",
+              "import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js';",
+              "try {",
+              "  var app = initializeApp({",
+              "    apiKey: 'AIzaSyChfwBA7SWzkMzA0vFFf9uG-Gq0L4YB_a8',",
+              "    authDomain: 'sri-sai-speciality-denta-5f6ac.firebaseapp.com',",
+              "    projectId: 'sri-sai-speciality-denta-5f6ac',",
+              "    storageBucket: 'sri-sai-speciality-denta-5f6ac.firebasestorage.app',",
+              "    messagingSenderId: '1031994512049',",
+              "    appId: '1:1031994512049:web:969ce6e58636213f6e4890'",
+              "  });",
+              "  var messaging = getMessaging(app);",
+              "  if ('Notification' in window && Notification.permission === 'default') {",
+              "    Notification.requestPermission().then(function(p) {",
+              "      if (p === 'granted') {",
+              "        getToken(messaging, { vapidKey: 'BPGlv4qREMBpyIAylK89PmJ-cDwGwfBud92XtA_Qd-D_TGmY7qwSgjaULWSQaPqilRpOQA7tmqLzSGQuv8-jTOc' })",
+              "          .then(function(t) { if(t) { localStorage.setItem('fcm_token', t); console.log('FCM ready'); if(typeof showToast==='function') showToast('🔔 Notifications enabled!','success'); } })",
+              "          .catch(function(e) { console.warn('FCM token err:', e); });",
+              "      }",
+              "    });",
+              "  }",
+              "  onMessage(messaging, function(payload) {",
+              "    var t = (payload.notification||{}).title||'Sri Sai Dental';",
+              "    var b = (payload.notification||{}).body||'';",
+              "    if(typeof showToast==='function') showToast('🔔 '+t+': '+b,'info');",
+              "  });",
+              "} catch(e) { console.warn('FCM init error:', e); }"
+            ].join('\n');
+            document.head.appendChild(fcmScript);
+          } catch(e) {
+            console.warn('FCM load error:', e);
+          }
+        }, 8000);
+      });
     </script>
 </body>
 </html>
