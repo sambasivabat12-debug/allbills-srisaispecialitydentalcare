@@ -1,11 +1,8 @@
-// Sri Sai Dental Care — Service Worker v3
-// PWABuilder score: 45/45
-// Added: Push Notifications + Offline Support (offline.html fallback)
+// Sri Sai Speciality Dental Care - Service Worker v4 (FCM Push Enabled)
+var CACHE_NAME = 'srisai-dental-v4';
+var OFFLINE_URL = '/offline.html';
 
-const CACHE_NAME = 'sri-sai-dental-v3';
-const OFFLINE_URL = '/offline.html';
-
-const PRECACHE_URLS = [
+var PRECACHE_URLS = [
   '/',
   '/index.html',
   '/offline.html',
@@ -14,145 +11,141 @@ const PRECACHE_URLS = [
   '/icons/icon-512.png'
 ];
 
-// ── Install: cache all shell assets ──────────────────────────────────────────
-self.addEventListener('install', event => {
+// ── Install ──────────────────────────────────────────────
+self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(PRECACHE_URLS);
+    }).then(function() {
+      return self.skipWaiting();
+    })
   );
-  self.skipWaiting();
 });
 
-// ── Activate: remove old caches ──────────────────────────────────────────────
-self.addEventListener('activate', event => {
+// ── Activate ─────────────────────────────────────────────
+self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE_NAME; })
+            .map(function(k) { return caches.delete(k); })
+      );
+    }).then(function() {
+      return self.clients.claim();
+    })
   );
-  self.clients.claim();
 });
 
-// ── Fetch: Network-first for API, Cache-first for assets ─────────────────────
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+// ── Fetch ────────────────────────────────────────────────
+self.addEventListener('fetch', function(event) {
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
 
-  // Network-first for API / Google Sheets calls
-  if (
-    url.hostname.includes('script.google.com') ||
-    url.hostname.includes('googleapis.com') ||
-    url.pathname.includes('exec')
-  ) {
-    event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ success: false, error: 'Offline' }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
-    );
-    return;
-  }
-
-  // Cache-first for everything else; serve offline.html for navigations when offline
   event.respondWith(
-    caches.match(event.request).then(cached => {
+    caches.match(event.request).then(function(cached) {
       if (cached) return cached;
-      return fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type !== 'basic')
-          return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        return response;
-      }).catch(() => {
-        // Navigation requests → show offline page
-        if (event.request.mode === 'navigate')
-          return caches.match(OFFLINE_URL);
-        // Image requests → return a transparent 1×1 px SVG placeholder
-        if (event.request.destination === 'image')
-          return new Response(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
-            { headers: { 'Content-Type': 'image/svg+xml' } }
-          );
+      return fetch(event.request).catch(function() {
+        return caches.match(OFFLINE_URL);
       });
     })
   );
 });
 
-// ── Push Notifications ────────────────────────────────────────────────────────
-self.addEventListener('push', event => {
-  let data = {
-    title: 'Sri Sai Speciality Dental Care',
-    body: 'You have a new notification.',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
-    tag: 'srisai-notification',
-    url: '/'
-  };
-
-  // Parse payload if the push contains JSON data
+// ── Push Notifications (Background) ─────────────────────
+self.addEventListener('push', function(event) {
+  var data = {};
   if (event.data) {
-    try {
-      const payload = event.data.json();
-      data = { ...data, ...payload };
-    } catch {
-      data.body = event.data.text();
-    }
+    try { data = event.data.json(); } catch(e) { data = { title: event.data.text() }; }
   }
 
+  var title   = data.notification && data.notification.title || data.title || 'Sri Sai Dental';
+  var body    = data.notification && data.notification.body  || data.body  || 'You have a new notification';
+  var icon    = data.notification && data.notification.icon  || '/icons/icon-192.png';
+  var badge   = '/icons/icon-192.png';
+  var tag     = data.tag || 'srisai-notif';
+  var url     = data.url || '/';
+
+  var options = {
+    body:    body,
+    icon:    icon,
+    badge:   badge,
+    tag:     tag,
+    vibrate: [200, 100, 200],
+    data:    { url: url },
+    actions: [
+      { action: 'open',    title: '📋 Open App' },
+      { action: 'dismiss', title: '✕ Dismiss'   }
+    ]
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      tag: data.tag,
-      data: { url: data.url },
-      vibrate: [200, 100, 200],
-      actions: [
-        { action: 'open',    title: 'Open App' },
-        { action: 'dismiss', title: 'Dismiss'  }
-      ]
-    })
+    self.registration.showNotification(title, options)
   );
 });
 
-// ── Notification Click ────────────────────────────────────────────────────────
-self.addEventListener('notificationclick', event => {
+// ── Notification Click ───────────────────────────────────
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
   if (event.action === 'dismiss') return;
 
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  var targetUrl = (event.notification.data && event.notification.data.url) || '/';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // If app window already open, focus it
-      for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(targetUrl);
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      // Otherwise open a new window
-      if (clients.openWindow) return clients.openWindow(targetUrl);
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
     })
   );
 });
 
-// ── Notification Close ────────────────────────────────────────────────────────
-self.addEventListener('notificationclose', event => {
-  // Analytics hook — log dismissed notifications if needed
-  console.log('Notification dismissed:', event.notification.tag);
-});
-
-// ── Periodic Sync ─────────────────────────────────────────────────────────────
-self.addEventListener('periodicsync', event => {
+// ── Background Sync ──────────────────────────────────────
+self.addEventListener('sync', function(event) {
   if (event.tag === 'sync-appointments') {
-    event.waitUntil(Promise.resolve()); // hook your sync logic here
+    console.log('Background sync: appointments');
   }
 });
 
-// ── Background Sync ───────────────────────────────────────────────────────────
-self.addEventListener('sync', event => {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(Promise.resolve()); // hook your offline queue here
+// ── Periodic Sync ────────────────────────────────────────
+self.addEventListener('periodicsync', function(event) {
+  if (event.tag === 'sync-appointments') {
+    console.log('Periodic sync: appointments');
   }
+});
+
+// ── Firebase Messaging Background Handler ────────────────
+// Required: import FCM compat for background messages
+importScripts('https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyChfwBA7SWzkMzA0vFFf9uG-Gq0L4YB_a8",
+  authDomain: "sri-sai-speciality-denta-5f6ac.firebaseapp.com",
+  projectId: "sri-sai-speciality-denta-5f6ac",
+  storageBucket: "sri-sai-speciality-denta-5f6ac.firebasestorage.app",
+  messagingSenderId: "1031994512049",
+  appId: "1:1031994512049:web:969ce6e58636213f6e4890"
+});
+
+var messagingBg = firebase.messaging();
+
+// Handle background messages
+messagingBg.onBackgroundMessage(function(payload) {
+  console.log('Background FCM message:', payload);
+  var title = payload.notification && payload.notification.title || 'Sri Sai Dental';
+  var body  = payload.notification && payload.notification.body  || '';
+  self.registration.showNotification(title, {
+    body:   body,
+    icon:   '/icons/icon-192.png',
+    badge:  '/icons/icon-192.png',
+    tag:    'srisai-bg-notif',
+    vibrate: [200, 100, 200]
+  });
 });
