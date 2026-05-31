@@ -10730,13 +10730,13 @@ Thank you! Visit again.`;
     </script>
 
 
-    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
               console.log('SW registered:', reg.scope);
+
               if ('periodicSync' in reg) {
                 navigator.permissions.query({ name: 'periodic-background-sync' })
                   .then(function(status) {
@@ -10747,55 +10747,25 @@ Thank you! Visit again.`;
                     }
                   }).catch(function(){});
               }
+
+              // Ask for notification permission after 5 seconds
+              setTimeout(function() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                  Notification.requestPermission().then(function(permission) {
+                    if (permission === 'granted') {
+                      console.log('Push notifications enabled');
+                      if (typeof showToast === 'function') {
+                        showToast('🔔 Notifications enabled!', 'success');
+                      }
+                    }
+                  }).catch(function(){});
+                }
+              }, 5000);
+
             })
             .catch(function (err) { console.warn('SW failed:', err); });
         });
       }
-    </script>
-
-    <!-- Firebase FCM - loads AFTER app is fully ready, non-blocking -->
-    <script>
-      window.addEventListener('load', function() {
-        // Delay FCM init by 8 seconds so app loads first
-        setTimeout(function() {
-          try {
-            var fcmScript = document.createElement('script');
-            fcmScript.type = 'module';
-            fcmScript.textContent = [
-              "import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';",
-              "import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js';",
-              "try {",
-              "  var app = initializeApp({",
-              "    apiKey: 'AIzaSyChfwBA7SWzkMzA0vFFf9uG-Gq0L4YB_a8',",
-              "    authDomain: 'sri-sai-speciality-denta-5f6ac.firebaseapp.com',",
-              "    projectId: 'sri-sai-speciality-denta-5f6ac',",
-              "    storageBucket: 'sri-sai-speciality-denta-5f6ac.firebasestorage.app',",
-              "    messagingSenderId: '1031994512049',",
-              "    appId: '1:1031994512049:web:969ce6e58636213f6e4890'",
-              "  });",
-              "  var messaging = getMessaging(app);",
-              "  if ('Notification' in window && Notification.permission === 'default') {",
-              "    Notification.requestPermission().then(function(p) {",
-              "      if (p === 'granted') {",
-              "        getToken(messaging, { vapidKey: 'BPGlv4qREMBpyIAylK89PmJ-cDwGwfBud92XtA_Qd-D_TGmY7qwSgjaULWSQaPqilRpOQA7tmqLzSGQuv8-jTOc' })",
-              "          .then(function(t) { if(t) { localStorage.setItem('fcm_token', t); console.log('FCM ready'); if(typeof showToast==='function') showToast('🔔 Notifications enabled!','success'); } })",
-              "          .catch(function(e) { console.warn('FCM token err:', e); });",
-              "      }",
-              "    });",
-              "  }",
-              "  onMessage(messaging, function(payload) {",
-              "    var t = (payload.notification||{}).title||'Sri Sai Dental';",
-              "    var b = (payload.notification||{}).body||'';",
-              "    if(typeof showToast==='function') showToast('🔔 '+t+': '+b,'info');",
-              "  });",
-              "} catch(e) { console.warn('FCM init error:', e); }"
-            ].join('\n');
-            document.head.appendChild(fcmScript);
-          } catch(e) {
-            console.warn('FCM load error:', e);
-          }
-        }, 8000);
-      });
     </script>
 </body>
 </html>
