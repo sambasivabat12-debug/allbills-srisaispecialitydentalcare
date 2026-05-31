@@ -4465,28 +4465,7 @@ Thank you! Visit again.`;
                 '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<title>Bill - Sri Sai Speciality Dental Care</title>' +
                 '<style>html,body{margin:0;padding:0;background:white;color:#000;font-family:"Bookman Old Style","Book Antiqua",Bookman,Georgia,serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{margin:10mm;size:A4 portrait;}@media print{html,body{margin:0;padding:0;}.no-print{display:none!important;}}</style>' +
-                '</head><body>' + html + '
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('sw.js', { scope: '/' })
-            .then(function (reg) {
-              console.log('SW registered:', reg.scope);
-              // Request periodic sync permission
-              if ('periodicSync' in reg) {
-                navigator.permissions.query({ name: 'periodic-background-sync' })
-                  .then(function(status) {
-                    if (status.state === 'granted') {
-                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
-                    }
-                  }).catch(function(){});
-              }
-            })
-            .catch(function (err) { console.warn('SW failed:', err); });
-        });
-      }
-    </script>
-</body></html>';
+                '</head><body>' + html + '</body></html>';
             var old = document.getElementById('__printIframe');
             if (old) old.remove();
             var iframe = document.createElement('iframe');
@@ -5375,28 +5354,7 @@ Thank you! Visit again.`;
                 '<tr class="grand"><td><strong>Grand Total</strong></td><td><strong>&#8377;'+parseFloat(bill.total).toFixed(2)+'</strong></td></tr>' +
                 '</table></div>' +
                 '<div class="ftr">Thank you for choosing '+CONFIG.clinicName+' &#x1F9B7;</div>' +
-                '
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('sw.js', { scope: '/' })
-            .then(function (reg) {
-              console.log('SW registered:', reg.scope);
-              // Request periodic sync permission
-              if ('periodicSync' in reg) {
-                navigator.permissions.query({ name: 'periodic-background-sync' })
-                  .then(function(status) {
-                    if (status.state === 'granted') {
-                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
-                    }
-                  }).catch(function(){});
-              }
-            })
-            .catch(function (err) { console.warn('SW failed:', err); });
-        });
-      }
-    </script>
-</body></html>';
+                '</body></html>';
 
             printBillHtml(html);
         }
@@ -10736,15 +10694,38 @@ Thank you! Visit again.`;
           navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
               console.log('SW registered:', reg.scope);
-              // Request periodic sync permission
+
               if ('periodicSync' in reg) {
                 navigator.permissions.query({ name: 'periodic-background-sync' })
                   .then(function(status) {
-                    if (status.state === 'granted') {
-                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    if (status && status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', {
+                        minInterval: 24 * 60 * 60 * 1000
+                      }).catch(function(){});
                     }
                   }).catch(function(){});
               }
+
+              window._requestPushPermission = function () {
+                if (!('PushManager' in window)) return;
+                if (!('Notification' in window)) return;
+                if (Notification.permission === 'granted') return;
+                if (Notification.permission === 'denied') return;
+                Notification.requestPermission().then(function(permission) {
+                  if (permission === 'granted') {
+                    console.log('Push notifications enabled');
+                  }
+                }).catch(function(err) {
+                  console.warn('Push permission error:', err);
+                });
+              };
+
+              setTimeout(function() {
+                if (typeof window._requestPushPermission === 'function') {
+                  window._requestPushPermission();
+                }
+              }, 3000);
+
             })
             .catch(function (err) { console.warn('SW failed:', err); });
         });
