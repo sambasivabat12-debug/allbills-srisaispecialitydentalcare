@@ -4465,7 +4465,28 @@ Thank you! Visit again.`;
                 '<meta name="viewport" content="width=device-width,initial-scale=1">' +
                 '<title>Bill - Sri Sai Speciality Dental Care</title>' +
                 '<style>html,body{margin:0;padding:0;background:white;color:#000;font-family:"Bookman Old Style","Book Antiqua",Bookman,Georgia,serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{margin:10mm;size:A4 portrait;}@media print{html,body{margin:0;padding:0;}.no-print{display:none!important;}}</style>' +
-                '</head><body>' + html + '</body></html>';
+                '</head><body>' + html + '
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js', { scope: '/' })
+            .then(function (reg) {
+              console.log('SW registered:', reg.scope);
+              // Request periodic sync permission
+              if ('periodicSync' in reg) {
+                navigator.permissions.query({ name: 'periodic-background-sync' })
+                  .then(function(status) {
+                    if (status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    }
+                  }).catch(function(){});
+              }
+            })
+            .catch(function (err) { console.warn('SW failed:', err); });
+        });
+      }
+    </script>
+</body></html>';
             var old = document.getElementById('__printIframe');
             if (old) old.remove();
             var iframe = document.createElement('iframe');
@@ -5354,7 +5375,28 @@ Thank you! Visit again.`;
                 '<tr class="grand"><td><strong>Grand Total</strong></td><td><strong>&#8377;'+parseFloat(bill.total).toFixed(2)+'</strong></td></tr>' +
                 '</table></div>' +
                 '<div class="ftr">Thank you for choosing '+CONFIG.clinicName+' &#x1F9B7;</div>' +
-                '</body></html>';
+                '
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js', { scope: '/' })
+            .then(function (reg) {
+              console.log('SW registered:', reg.scope);
+              // Request periodic sync permission
+              if ('periodicSync' in reg) {
+                navigator.permissions.query({ name: 'periodic-background-sync' })
+                  .then(function(status) {
+                    if (status.state === 'granted') {
+                      reg.periodicSync.register('sync-appointments', { minInterval: 24 * 60 * 60 * 1000 });
+                    }
+                  }).catch(function(){});
+              }
+            })
+            .catch(function (err) { console.warn('SW failed:', err); });
+        });
+      }
+    </script>
+</body></html>';
 
             printBillHtml(html);
         }
@@ -10688,13 +10730,88 @@ Thank you! Visit again.`;
     </script>
 
 
+    <!-- Firebase FCM Push Notifications -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
+      import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js';
+
+      var FIREBASE_CONFIG = {
+        apiKey: "AIzaSyChfwBA7SWzkMzA0vFFf9uG-Gq0L4YB_a8",
+        authDomain: "sri-sai-speciality-denta-5f6ac.firebaseapp.com",
+        projectId: "sri-sai-speciality-denta-5f6ac",
+        storageBucket: "sri-sai-speciality-denta-5f6ac.firebasestorage.app",
+        messagingSenderId: "1031994512049",
+        appId: "1:1031994512049:web:969ce6e58636213f6e4890"
+      };
+
+      var VAPID_KEY = "BPGlv4qREMBpyIAylK89PmJ-cDwGwfBud92XtA_Qd-D_TGmY7qwSgjaULWSQaPqilRpOQA7tmqLzSGQuv8-jTOc";
+
+      var firebaseApp = initializeApp(FIREBASE_CONFIG);
+      var messaging = getMessaging(firebaseApp);
+
+      // Store FCM token in localStorage for sending later
+      function saveFcmToken(token) {
+        localStorage.setItem('fcm_token', token);
+        console.log('FCM Token saved:', token.substring(0, 20) + '...');
+      }
+
+      // Request permission and get token
+      window.initFCM = function() {
+        if (!('Notification' in window)) return;
+        Notification.requestPermission().then(function(permission) {
+          if (permission === 'granted') {
+            getToken(messaging, { vapidKey: VAPID_KEY })
+              .then(function(token) {
+                if (token) {
+                  saveFcmToken(token);
+                  // Show success toast
+                  if (typeof showToast === 'function') {
+                    showToast('🔔 Push notifications enabled!', 'success');
+                  }
+                }
+              })
+              .catch(function(err) {
+                console.warn('FCM token error:', err);
+              });
+          }
+        });
+      };
+
+      // Handle foreground messages (when app is open)
+      onMessage(messaging, function(payload) {
+        console.log('FCM message received:', payload);
+        var title = payload.notification && payload.notification.title || 'Sri Sai Dental';
+        var body  = payload.notification && payload.notification.body  || '';
+        if (typeof showToast === 'function') {
+          showToast('🔔 ' + title + ': ' + body, 'info');
+        }
+        // Also show browser notification
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body: body,
+            icon: '/icons/icon-192.png',
+            badge: '/icons/icon-192.png'
+          });
+        }
+      });
+
+      // Auto-init after 4 seconds on page load
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          if (typeof window.initFCM === 'function') {
+            window.initFCM();
+          }
+        }, 4000);
+      });
+    </script>
+
+    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('sw.js', { scope: '/' })
             .then(function (reg) {
               console.log('SW registered:', reg.scope);
-
               if ('periodicSync' in reg) {
                 navigator.permissions.query({ name: 'periodic-background-sync' })
                   .then(function(status) {
@@ -10705,27 +10822,6 @@ Thank you! Visit again.`;
                     }
                   }).catch(function(){});
               }
-
-              window._requestPushPermission = function () {
-                if (!('PushManager' in window)) return;
-                if (!('Notification' in window)) return;
-                if (Notification.permission === 'granted') return;
-                if (Notification.permission === 'denied') return;
-                Notification.requestPermission().then(function(permission) {
-                  if (permission === 'granted') {
-                    console.log('Push notifications enabled');
-                  }
-                }).catch(function(err) {
-                  console.warn('Push permission error:', err);
-                });
-              };
-
-              setTimeout(function() {
-                if (typeof window._requestPushPermission === 'function') {
-                  window._requestPushPermission();
-                }
-              }, 3000);
-
             })
             .catch(function (err) { console.warn('SW failed:', err); });
         });
